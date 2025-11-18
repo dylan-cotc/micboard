@@ -38,6 +38,10 @@ COPY --from=builder /app/client/dist ./client
 # Create uploads directory
 RUN mkdir -p uploads/photos
 
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Expose port
 EXPOSE 5000
 
@@ -45,5 +49,6 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:5000/api/health || exit 1
 
-# Start the application
+# Use entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["npm", "start"]

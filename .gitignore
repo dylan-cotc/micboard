@@ -41,3 +41,4 @@ coverage/
 
 # Uploads content (keep directory structure)
 server/uploads/*
+!server/uploads/.gitkeep
