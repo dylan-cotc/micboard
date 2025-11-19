@@ -1303,17 +1303,24 @@ router.put('/users/:id/password', async (req: Request, res: Response): Promise<v
     const { id } = req.params;
     const { currentPassword, newPassword } = req.body;
 
+    console.log('=== PASSWORD RESET DEBUG ===');
+    console.log('User ID:', id);
+    console.log('Request body:', { currentPassword: currentPassword ? '[PROVIDED]' : '[NOT PROVIDED]', newPassword: '[PROVIDED]' });
+
     if (!newPassword) {
       res.status(400).json({ error: 'New password is required' });
       return;
     }
 
     // Get user info
-    const userResult = await pool.query('SELECT password_hash FROM users WHERE id = $1', [id]);
+    const userResult = await pool.query('SELECT password_hash, username FROM users WHERE id = $1', [id]);
     if (userResult.rows.length === 0) {
+      console.log('User not found');
       res.status(404).json({ error: 'User not found' });
       return;
     }
+
+    console.log('Found user:', userResult.rows[0].username);
 
     // If currentPassword is provided, verify it (for regular users changing their own password)
     // For admin password resets, currentPassword is optional
@@ -1321,20 +1328,34 @@ router.put('/users/:id/password', async (req: Request, res: Response): Promise<v
       const { comparePassword } = await import('../utils/password');
       const isValid = await comparePassword(currentPassword, userResult.rows[0].password_hash);
       if (!isValid) {
+        console.log('Current password verification failed');
         res.status(401).json({ error: 'Current password is incorrect' });
         return;
       }
+      console.log('Current password verified');
+    } else {
+      console.log('Skipping current password verification (admin reset)');
     }
 
     // Hash new password
     const { hashPassword } = await import('../utils/password');
     const newPasswordHash = await hashPassword(newPassword);
+    console.log('New password hashed successfully');
 
     // Update password and mark as not first login
-    await pool.query(
+    const updateResult = await pool.query(
       'UPDATE users SET password_hash = $1, first_login = false, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [newPasswordHash, id]
     );
+
+    console.log('Database update result:', updateResult.rowCount, 'rows affected');
+
+    // Verify the update worked
+    const verifyResult = await pool.query('SELECT password_hash, first_login FROM users WHERE id = $1', [id]);
+    console.log('Verification after update:', {
+      hasPasswordHash: !!verifyResult.rows[0].password_hash,
+      firstLogin: verifyResult.rows[0].first_login
+    });
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
