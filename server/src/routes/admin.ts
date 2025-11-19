@@ -1316,6 +1316,7 @@ router.put('/users/:id/password', async (req: Request, res: Response): Promise<v
     }
 
     // If currentPassword is provided, verify it (for regular users changing their own password)
+    // For admin password resets, currentPassword is optional
     if (currentPassword) {
       const { comparePassword } = await import('../utils/password');
       const isValid = await comparePassword(currentPassword, userResult.rows[0].password_hash);
