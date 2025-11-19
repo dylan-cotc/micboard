@@ -178,10 +178,7 @@ router.get('/people', async (req: Request, res: Response): Promise<void> => {
     const params: any[] = [];
 
     if (location_id) {
-      query += `
-        INNER JOIN person_locations pl ON p.id = pl.person_id
-        WHERE pl.location_id = $1
-      `;
+      query += ' WHERE p.location_id = $1';
       params.push(location_id);
     }
 
@@ -260,50 +257,35 @@ router.post('/people/sync', async (req: Request, res: Response): Promise<void> =
 
       const pcPersonId = member.relationships.person.data.id;
 
-      // Check if person exists globally
+      // Check if person already exists for this specific location
       const existingPerson = await pool.query(
-        'SELECT id FROM people WHERE pc_person_id = $1',
-        [pcPersonId]
+        'SELECT id FROM people WHERE pc_person_id = $1 AND location_id = $2',
+        [pcPersonId, location_id]
       );
 
-      let personId: number;
-
       if (existingPerson.rows.length > 0) {
-        // Person already exists globally, reuse them
-        personId = existingPerson.rows[0].id;
-
-        // Update their position if it changed
+        // Person already exists for this location, update their position if it changed
         await pool.query(
           'UPDATE people SET position_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-          [position.id, personId]
+          [position.id, existingPerson.rows[0].id]
         );
       } else {
         // Get full person details from Planning Center
         const person = await planningCenterService.getPerson(pcPersonId);
 
-        // Insert new person (without location_id)
-        const insertResult = await pool.query(
-          `INSERT INTO people (pc_person_id, first_name, last_name, position_id)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id`,
+        // Insert new person for this location
+        await pool.query(
+          `INSERT INTO people (pc_person_id, first_name, last_name, position_id, location_id)
+           VALUES ($1, $2, $3, $4, $5)`,
           [
             pcPersonId,
             person.attributes.first_name,
             person.attributes.last_name,
             position.id,
+            location_id,
           ]
         );
-
-        personId = insertResult.rows[0].id;
       }
-
-      // Link person to this location (if not already linked)
-      await pool.query(
-        `INSERT INTO person_locations (person_id, location_id)
-         VALUES ($1, $2)
-         ON CONFLICT (person_id, location_id) DO NOTHING`,
-        [personId, location_id]
-      );
 
       syncedCount++;
     }
@@ -312,9 +294,8 @@ router.post('/people/sync', async (req: Request, res: Response): Promise<void> =
     const result = await pool.query(`
       SELECT p.*, pos.name as position_name
       FROM people p
-      INNER JOIN person_locations pl ON p.id = pl.person_id
       LEFT JOIN positions pos ON p.position_id = pos.id
-      WHERE pl.location_id = $1
+      WHERE p.location_id = $1
       ORDER BY p.last_name, p.first_name
     `, [location_id]);
 
