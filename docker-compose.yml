@@ -21,6 +21,7 @@ services:
       - proxynet
 
   app:
+    build: .
     image: dylancotc/micboard:latest
     container_name: micboard-app
     ports:

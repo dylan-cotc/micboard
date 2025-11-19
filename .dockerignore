@@ -3,6 +3,16 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
+# Vite cache
+client/.vite/
+client/node_modules/.vite/
+
+# Environment files (use production defaults)
+client/.env
+client/.env.local
+client/.env.development
+client/.env.production
+
 # Build outputs
 dist/
 build/

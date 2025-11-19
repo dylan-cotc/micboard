@@ -8,10 +8,14 @@ COPY package*.json ./
 RUN npm ci
 
 # Build client
+# Force rebuild by adding build arg BEFORE copying files
+ARG CACHEBUST=1
 COPY client/package*.json ./client/
 WORKDIR /app/client
 RUN npm ci
 COPY client/ ./
+# Clean any Vite cache before building
+RUN rm -rf node_modules/.vite .vite
 RUN npm run build
 
 # Build server
@@ -35,11 +39,8 @@ COPY --from=builder /app/server/dist ./dist
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/package*.json ./
 
-# Copy server source for migrations (needed for ts-node)
-COPY --from=builder /app/server/src ./src
-
-# Install ts-node for migrations
-RUN npm install ts-node --save
+# Copy migration SQL files (needed for runMigrations.js)
+COPY --from=builder /app/server/src/migrations ./dist/migrations
 
 # Copy client build
 COPY --from=builder /app/client/dist ./client
@@ -63,4 +64,4 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["npm", "start"]
 
 # Force rebuild marker
-LABEL rebuild="2025-11-19-v3"
+LABEL rebuild="2025-11-19-v4"

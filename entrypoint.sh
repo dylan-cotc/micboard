@@ -16,11 +16,12 @@ admin_exists() {
 # Function to run database migrations
 run_migrations() {
     echo "Running database migrations..."
-    if npx ts-node src/scripts/runMigrations.ts; then
+    if node dist/scripts/runMigrations.js; then
         echo "✓ Database migrations completed successfully"
+        return 0
     else
-        echo "⚠️  Could not run migrations automatically"
-        echo "   You may need to run migrations manually"
+        echo "⚠️  Database migrations failed"
+        return 1
     fi
 }
 
