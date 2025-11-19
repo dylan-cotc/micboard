@@ -113,12 +113,25 @@ router.post('/positions/sync', async (req: Request, res: Response): Promise<void
     const pcPositions = await planningCenterService.getAllPositions(serviceTypeId);
 
     for (const position of pcPositions) {
-      await pool.query(
-        `INSERT INTO positions (pc_position_id, name, location_id, sync_enabled)
-         VALUES ($1, $2, $3, false)
-         ON CONFLICT (pc_position_id, location_id) DO UPDATE SET name = $2`,
-        [position.id, position.attributes.name, location_id]
+      // Check if position already exists for this location
+      const existing = await pool.query(
+        'SELECT id FROM positions WHERE pc_position_id = $1 AND location_id = $2',
+        [position.id, location_id]
       );
+
+      if (existing.rows.length > 0) {
+        // Update existing position
+        await pool.query(
+          'UPDATE positions SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [position.attributes.name, existing.rows[0].id]
+        );
+      } else {
+        // Insert new position
+        await pool.query(
+          'INSERT INTO positions (pc_position_id, name, location_id, sync_enabled) VALUES ($1, $2, $3, false)',
+          [position.id, position.attributes.name, location_id]
+        );
+      }
     }
 
     const result = await pool.query(
