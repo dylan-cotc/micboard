@@ -19,7 +19,17 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads/photos';
 
 // Middleware
 app.use(cors({
-  origin: true, // Allow all origins in development
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost for development
+    if (origin.includes('localhost')) return callback(null, true);
+
+    // Allow common reverse proxy scenarios
+    // You may want to restrict this to specific domains in production
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
