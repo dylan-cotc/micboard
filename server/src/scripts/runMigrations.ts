@@ -6,8 +6,18 @@ async function runMigrations() {
   try {
     console.log('Running database migrations...');
 
-    // List of migrations in order (starting from 011 since earlier ones are already run)
+    // List of ALL migrations in order
     const migrations = [
+      '001_initial_schema.sql',
+      '002_add_microphone_order.sql',
+      '003_add_photo_crop_params.sql',
+      '004_add_photo_position.sql',
+      '005_add_locations.sql',
+      '006_add_folders.sql',
+      '007_add_multi_tenant_support.sql',
+      '008_fix_multi_tenant_issues.sql',
+      '009_add_global_settings.sql',
+      '010_add_microphone_separator.sql',
       '011_add_primary_location_constraint.sql',
       '012_create_users_table.sql',
     ];
