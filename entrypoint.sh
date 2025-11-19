@@ -8,11 +8,6 @@ generate_secret() {
     openssl rand -hex 32
 }
 
-# Function to check if admin user exists
-admin_exists() {
-    PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d micboard -t -c "SELECT COUNT(*) FROM users WHERE username = 'admin';" 2>/dev/null | tr -d ' ' || echo "0"
-}
-
 # Function to run database migrations
 run_migrations() {
     echo "Running database migrations..."
@@ -22,27 +17,6 @@ run_migrations() {
     else
         echo "⚠️  Database migrations failed"
         return 1
-    fi
-}
-
-# Function to create default admin user
-create_admin() {
-    echo "Creating default admin user..."
-
-    # Generate password hash for 'admin' (bcrypt hash for 'admin')
-    # This is a pre-computed hash for the password 'admin'
-    ADMIN_PASSWORD_HASH='$2b$10$kQDgAXkwxZWciL3QfVbNSe3BV3IA55swGmRNdDNtKTeGLCBfmWhTi'
-
-    # Insert admin user using psql
-    if PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d micboard -c "
-        INSERT INTO users (username, password_hash)
-        VALUES ('admin', '$ADMIN_PASSWORD_HASH')
-        ON CONFLICT (username) DO NOTHING;
-    " 2>/dev/null; then
-        echo "✓ Default admin user created (username: admin, password: admin)"
-        echo "⚠️  IMPORTANT: Change the default password after first login!"
-    else
-        echo "⚠️  Could not create admin user automatically"
     fi
 }
 
@@ -123,13 +97,9 @@ else
     # Run database migrations
     run_migrations
 
-    # Check if admin user exists, create if not
-    admin_count=$(admin_exists)
-    if [ "$admin_count" = "0" ]; then
-        create_admin
-    else
-        echo "Admin user already exists"
-    fi
+    # Admin user is now created by migration 012_create_users_table.sql
+    # No need to create it here anymore
+    echo "Admin user creation handled by database migrations"
 fi
 
 echo "Starting Micboard application..."
