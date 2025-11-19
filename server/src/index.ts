@@ -18,6 +18,10 @@ const PORT = process.env.PORT || 5000;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads/photos';
 
 // Middleware
+app.use(cors({
+  origin: true, // Allow all origins in development
+  credentials: true
+}));
 app.use(express.json());
 
 // Serve uploaded photos statically
