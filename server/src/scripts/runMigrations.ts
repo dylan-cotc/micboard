@@ -16,6 +16,7 @@ async function runMigrations() {
       '006_add_folders.sql',
       '007_add_multi_tenant_support.sql',
       '008_fix_multi_tenant_issues.sql',
+      '009_add_global_settings.sql',
     ];
 
     // Run each migration in order
