@@ -32,22 +32,33 @@ router.get('/data', async (req: Request, res: Response): Promise<void> => {
     const locationId = location.id;
 
     // Get church settings
-    const settingsResult = await pool.query(
-      "SELECT key, value FROM settings WHERE key IN ('church_name')"
-    );
-    const settings = settingsResult.rows.reduce((acc: any, row: any) => {
-      acc[row.key] = row.value;
-      return acc;
-    }, {});
+    let settings: any = { church_name: 'Church' };
+    try {
+      const settingsResult = await pool.query(
+        "SELECT key, value FROM settings WHERE key IN ('church_name') AND location_id = $1",
+        [locationId]
+      );
+      settings = settingsResult.rows.reduce((acc: any, row: any) => {
+        acc[row.key] = row.value;
+        return acc;
+      }, { church_name: 'Church' });
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
 
     // Get global display settings (logo and dark mode)
-    const displaySettingsResult = await pool.query(
-      "SELECT key, value FROM global_settings WHERE key IN ('logo_path', 'logo_position', 'logo_display_mode', 'dark_mode')"
-    );
-    const displaySettings = displaySettingsResult.rows.reduce((acc: any, row: any) => {
-      acc[row.key] = row.value;
-      return acc;
-    }, {});
+    let displaySettings: any = {};
+    try {
+      const displaySettingsResult = await pool.query(
+        "SELECT key, value FROM global_settings WHERE key IN ('logo_path', 'logo_position', 'logo_display_mode', 'dark_mode')"
+      );
+      displaySettings = displaySettingsResult.rows.reduce((acc: any, row: any) => {
+        acc[row.key] = row.value;
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error('Error fetching display settings:', error);
+    }
 
     // Get next Sunday's date (find next Sunday)
     const today = new Date();
@@ -56,30 +67,39 @@ router.get('/data', async (req: Request, res: Response): Promise<void> => {
     nextSunday.setDate(today.getDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
 
     // Get people and separators for display (filtered by location)
-    // First get all microphones (including separators) ordered by display_order
-    const microphonesResult = await pool.query(`
-      SELECT m.id, m.name, m.display_order, m.is_separator
-      FROM microphones m
-      WHERE m.location_id = $1
-      ORDER BY m.display_order
-    `, [locationId]);
+    let microphones: any[] = [];
+    let people: any[] = [];
 
-    // Get people with their microphone assignments
-    const peopleResult = await pool.query(`
-      SELECT DISTINCT p.id, p.first_name, p.last_name, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom, pos.name as position_name,
-             MIN(m.display_order) as mic_order
-      FROM people p
-      INNER JOIN people_microphones pm ON p.id = pm.person_id
-      INNER JOIN microphones m ON pm.microphone_id = m.id AND m.location_id = $1 AND m.is_separator = false
-      LEFT JOIN positions pos ON p.position_id = pos.id
-      WHERE p.location_id = $1
-      GROUP BY p.id, p.first_name, p.last_name, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom, pos.name
-      ORDER BY mic_order, pos.name, p.last_name, p.first_name
-    `, [locationId]);
+    try {
+      // First get all microphones (including separators) ordered by display_order
+      const microphonesResult = await pool.query(`
+        SELECT m.id, m.name, m.display_order, m.is_separator
+        FROM microphones m
+        WHERE m.location_id = $1
+        ORDER BY m.display_order
+      `, [locationId]);
+      microphones = microphonesResult.rows;
+    } catch (error) {
+      console.error('Error fetching microphones:', error);
+    }
 
-    // Build display items array with people and separators in correct order
-    const microphones = microphonesResult.rows;
-    const people = peopleResult.rows;
+    try {
+      // Get people with their microphone assignments
+      const peopleResult = await pool.query(`
+        SELECT DISTINCT p.id, p.first_name, p.last_name, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom, pos.name as position_name,
+                MIN(m.display_order) as mic_order
+        FROM people p
+        INNER JOIN people_microphones pm ON p.id = pm.person_id
+        INNER JOIN microphones m ON pm.microphone_id = m.id AND m.location_id = $1 AND m.is_separator = false
+        LEFT JOIN positions pos ON p.position_id = pos.id
+        WHERE p.location_id = $1
+        GROUP BY p.id, p.first_name, p.last_name, p.photo_path, p.photo_position_x, p.photo_position_y, p.photo_zoom, pos.name
+        ORDER BY mic_order, pos.name, p.last_name, p.first_name
+      `, [locationId]);
+      people = peopleResult.rows;
+    } catch (error) {
+      console.error('Error fetching people:', error);
+    }
 
     // Create a map of mic_order to people
     const peopleByOrder: { [key: number]: any[] } = {};
@@ -119,8 +139,8 @@ router.get('/data', async (req: Request, res: Response): Promise<void> => {
 
     // Get Planning Center setlist if available for this location
     let setlist = null;
-    if (location.pc_service_type_id) {
-      try {
+    try {
+      if (location.pc_service_type_id) {
         await planningCenterService.initialize();
         const nextPlan = await planningCenterService.getNextPlan(location.pc_service_type_id);
 
@@ -132,16 +152,23 @@ router.get('/data', async (req: Request, res: Response): Promise<void> => {
 
           // Get setlist visibility settings
           const visibilitySettings = await pool.query(
-            "SELECT value FROM settings WHERE key = 'setlist_hidden_items'"
+            "SELECT value FROM settings WHERE key = 'setlist_hidden_items' AND location_id = $1",
+            [locationId]
           );
 
-          const hiddenItems = visibilitySettings.rows.length > 0
-            ? JSON.parse(visibilitySettings.rows[0].value || '[]')
-            : [
-                // Default hidden items (pre-service/setup)
-                'Worship Team - Dress-code',
-                'Vocal Warm-ups',
-              ];
+          let hiddenItems: string[] = [];
+          try {
+            hiddenItems = visibilitySettings.rows.length > 0
+              ? JSON.parse(visibilitySettings.rows[0].value || '[]')
+              : [
+                  // Default hidden items (pre-service/setup)
+                  'Worship Team - Dress-code',
+                  'Vocal Warm-ups',
+                ];
+          } catch (parseError) {
+            console.error('Error parsing setlist_hidden_items:', parseError);
+            hiddenItems = ['Worship Team - Dress-code', 'Vocal Warm-ups'];
+          }
 
           // Filter out hidden items
           const filteredItems = items
@@ -157,17 +184,17 @@ router.get('/data', async (req: Request, res: Response): Promise<void> => {
             items: filteredItems,
           };
         }
-      } catch (error) {
-        console.error('Error fetching Planning Center data:', error);
-        // Continue without setlist if PC is not configured
       }
+    } catch (error) {
+      console.error('Error fetching Planning Center data:', error);
+      // Continue without setlist if PC is not configured or fails
     }
 
     res.json({
       churchName: settings.church_name || 'Church',
       locationName: location.display_name || location.name,
       date: nextSunday.toISOString().split('T')[0],
-      people: peopleResult.rows,
+      people: people,
       displayItems,
       setlist,
       logo: {
