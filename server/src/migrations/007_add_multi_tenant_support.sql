@@ -17,11 +17,11 @@ ALTER TABLE service_plans ADD COLUMN IF NOT EXISTS location_id INTEGER REFERENCE
 -- Step 3: Create indexes for performance (after data backfill)
 -- Note: Indexes on location_id will be created after data is backfilled to avoid issues with NULL values
 
--- Step 4: Create a default location for existing data
+-- Step 4: Create a default location for existing data (only if no locations exist)
 -- This handles migration of existing single-tenant data to multi-tenant structure
 INSERT INTO locations (name, slug, is_primary, display_name, sync_enabled)
-VALUES ('Main Campus', 'main', true, 'Main Campus', true)
-ON CONFLICT (slug) DO NOTHING;
+SELECT 'Main Campus', 'main', true, 'Main Campus', true
+WHERE NOT EXISTS (SELECT 1 FROM locations LIMIT 1);
 
 -- Step 5: Backfill existing data to reference the default location
 -- Only update rows that don't already have a location_id set
