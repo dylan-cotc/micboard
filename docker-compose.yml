@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -21,7 +19,6 @@ services:
       - proxynet
 
   app:
-    build: .
     image: dylancotc/micboard:latest
     container_name: micboard-app
     ports:
