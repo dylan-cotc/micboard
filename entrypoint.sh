@@ -13,6 +13,17 @@ admin_exists() {
     PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d micboard -t -c "SELECT COUNT(*) FROM users WHERE username = 'admin';" 2>/dev/null | tr -d ' ' || echo "0"
 }
 
+# Function to run database migrations
+run_migrations() {
+    echo "Running database migrations..."
+    if npx ts-node src/scripts/runMigrations.ts; then
+        echo "✓ Database migrations completed successfully"
+    else
+        echo "⚠️  Could not run migrations automatically"
+        echo "   You may need to run migrations manually"
+    fi
+}
+
 # Function to create default admin user
 create_admin() {
     echo "Creating default admin user..."
@@ -90,6 +101,9 @@ done
 if [ $timeout -le 0 ]; then
     echo "⚠️  Database connection timeout - starting app anyway"
 else
+    # Run database migrations
+    run_migrations
+
     # Check if admin user exists, create if not
     admin_count=$(admin_exists)
     if [ "$admin_count" = "0" ]; then

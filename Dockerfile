@@ -32,6 +32,12 @@ COPY --from=builder /app/server/dist ./dist
 COPY --from=builder /app/server/node_modules ./node_modules
 COPY --from=builder /app/server/package*.json ./
 
+# Copy server source for migrations (needed for ts-node)
+COPY --from=builder /app/server/src ./src
+
+# Install ts-node for migrations
+RUN npm install ts-node --save
+
 # Copy client build
 COPY --from=builder /app/client/dist ./client
 
