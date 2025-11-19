@@ -96,38 +96,26 @@ export default function Users() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('=== CLIENT: Password reset form submitted ===');
-    console.log('Editing user:', editingUser);
-    console.log('Reset data:', resetPasswordData);
-
-    if (!editingUser) {
-      console.log('No editing user, returning');
-      return;
-    }
+    if (!editingUser) return;
 
     if (resetPasswordData.newPassword !== resetPasswordData.confirmPassword) {
-      console.log('Passwords do not match');
       setMessage({ type: 'error', text: 'Passwords do not match' });
       return;
     }
 
     if (resetPasswordData.newPassword.length < 6) {
-      console.log('Password too short');
       setMessage({ type: 'error', text: 'Password must be at least 6 characters long' });
       return;
     }
 
     setMessage(null);
-    console.log('Calling adminAPI.resetUserPassword...');
 
     try {
-      const result = await adminAPI.resetUserPassword(editingUser.id, resetPasswordData.newPassword);
-      console.log('Password reset API call successful:', result);
+      await adminAPI.resetUserPassword(editingUser.id, resetPasswordData.newPassword);
       setMessage({ type: 'success', text: 'Password reset successfully!' });
       setResetPasswordData({ newPassword: '', confirmPassword: '' });
       fetchUsers(); // Refresh to update first_login status
     } catch (error: any) {
-      console.error('Password reset API call failed:', error);
       setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to reset password' });
     }
   };
