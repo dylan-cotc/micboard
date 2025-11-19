@@ -6,7 +6,8 @@
 ALTER TABLE locations
 ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE,
 ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT false,
-ADD COLUMN IF NOT EXISTS display_name VARCHAR(255);
+ADD COLUMN IF NOT EXISTS display_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'America/New_York';
 
 -- Step 2: Add location_id foreign key to all data tables
 ALTER TABLE positions ADD COLUMN IF NOT EXISTS location_id INTEGER REFERENCES locations(id) ON DELETE CASCADE;
