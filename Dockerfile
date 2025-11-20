@@ -26,13 +26,23 @@ RUN npm ci
 COPY server/ ./
 RUN npm run build
 
-# Runtime stage
+# Runtime stage with embedded PostgreSQL
 FROM node:20-slim AS runtime
 
 WORKDIR /app
 
-# Install curl and postgresql-client for health checks and database connectivity
-RUN apt-get update && apt-get install -y curl postgresql-client && rm -rf /var/lib/apt/lists/*
+# Install curl and full PostgreSQL for embedded database
+RUN apt-get update && apt-get install -y \
+    curl \
+    postgresql \
+    postgresql-contrib \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create PostgreSQL directories and set permissions
+RUN mkdir -p /var/lib/postgresql/data /var/run/postgresql \
+    && chown -R postgres:postgres /var/lib/postgresql /var/run/postgresql \
+    && chmod 700 /var/lib/postgresql/data
 
 # Copy server build and dependencies
 COPY --from=builder /app/server/dist ./dist
@@ -52,8 +62,8 @@ RUN mkdir -p uploads/photos
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Expose port
-EXPOSE 5000
+# Expose ports
+EXPOSE 5000 5432
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

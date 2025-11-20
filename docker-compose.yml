@@ -1,35 +1,15 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: micboard-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=micboard
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - proxynet
-
   app:
+    build: .
     image: dylancotc/micboard:latest
     container_name: micboard-app
     ports:
       - "5001:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - uploads_data:/app/uploads
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/micboard
+      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/micboard
       - JWT_SECRET=032ed9bcbe8cad582dfb40b18d3dec38a927b0fbee1af489e154892a89d26842
       - PORT=5000
       - UPLOAD_DIR=uploads/photos

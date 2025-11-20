@@ -8,6 +8,38 @@ generate_secret() {
     openssl rand -hex 32
 }
 
+# Function to start PostgreSQL
+start_postgres() {
+    echo "Starting PostgreSQL..."
+
+    # Initialize database if not already done
+    if [ ! -d "/var/lib/postgresql/data/base" ]; then
+        echo "Initializing PostgreSQL database..."
+        sudo -u postgres /usr/lib/postgresql/15/bin/initdb -D /var/lib/postgresql/data
+    fi
+
+    # Start PostgreSQL
+    sudo -u postgres /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/logfile start
+
+    # Wait for PostgreSQL to start
+    echo "Waiting for PostgreSQL to start..."
+    for i in {1..30}; do
+        if sudo -u postgres /usr/lib/postgresql/15/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+            echo "✓ PostgreSQL is ready"
+            break
+        fi
+        echo "Waiting for PostgreSQL... ($i/30)"
+        sleep 2
+    done
+
+    # Create database if it doesn't exist
+    if ! sudo -u postgres /usr/lib/postgresql/15/bin/psql -h localhost -p 5432 -lqt | cut -d \| -f 1 | grep -qw micboard; then
+        echo "Creating micboard database..."
+        sudo -u postgres /usr/lib/postgresql/15/bin/createdb -h localhost -p 5432 micboard
+        echo "✓ Created micboard database"
+    fi
+}
+
 # Function to run database migrations
 run_migrations() {
     echo "Running database migrations..."
@@ -94,6 +126,11 @@ done
 if [ $timeout -le 0 ]; then
     echo "⚠️  Database connection timeout - starting app anyway"
 else
+    # Start embedded PostgreSQL if using single container
+    if command -v pg_ctl >/dev/null 2>&1; then
+        start_postgres
+    fi
+
     # Run database migrations
     run_migrations
 
