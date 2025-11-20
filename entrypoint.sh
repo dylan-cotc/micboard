@@ -123,6 +123,12 @@ export JWT_SECRET
 export NODE_ENV
 export DATABASE_URL
 
+# Check if we need to start embedded PostgreSQL
+if [ -x "/usr/lib/postgresql/15/bin/pg_ctl" ]; then
+    echo "Embedded PostgreSQL detected - starting database service..."
+    start_postgres
+fi
+
 # Wait for database to be ready
 echo "Waiting for database to be ready..."
 echo "Environment variables:"
@@ -157,11 +163,6 @@ done
 if [ $timeout -le 0 ]; then
     echo "⚠️  Database connection timeout - starting app anyway"
 else
-    # Start embedded PostgreSQL if using single container
-    if command -v pg_ctl >/dev/null 2>&1; then
-        start_postgres
-    fi
-
     # Run database migrations
     run_migrations
 
