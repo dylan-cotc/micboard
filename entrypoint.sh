@@ -19,12 +19,18 @@ start_postgres() {
     fi
 
     # Start PostgreSQL
-    sudo -u postgres /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/logfile start
+    PG_CTL="/usr/lib/postgresql/15/bin/pg_ctl"
+    PG_ISREADY="/usr/lib/postgresql/15/bin/pg_isready"
+    PSQL="/usr/lib/postgresql/15/bin/psql"
+    CREATEDB="/usr/lib/postgresql/15/bin/createdb"
+
+    echo "Starting PostgreSQL with $PG_CTL..."
+    sudo -u postgres "$PG_CTL" -D /var/lib/postgresql/data -l /var/lib/postgresql/logfile start
 
     # Wait for PostgreSQL to start
     echo "Waiting for PostgreSQL to start..."
     for i in {1..30}; do
-        if sudo -u postgres /usr/lib/postgresql/15/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+        if sudo -u postgres "$PG_ISREADY" -h localhost -p 5432 >/dev/null 2>&1; then
             echo "✓ PostgreSQL is ready"
             break
         fi
@@ -33,9 +39,9 @@ start_postgres() {
     done
 
     # Create database if it doesn't exist
-    if ! sudo -u postgres /usr/lib/postgresql/15/bin/psql -h localhost -p 5432 -lqt | cut -d \| -f 1 | grep -qw micboard; then
+    if ! sudo -u postgres "$PSQL" -h localhost -p 5432 -lqt | cut -d \| -f 1 | grep -qw micboard; then
         echo "Creating micboard database..."
-        sudo -u postgres /usr/lib/postgresql/15/bin/createdb -h localhost -p 5432 micboard
+        sudo -u postgres "$CREATEDB" -h localhost -p 5432 micboard
         echo "✓ Created micboard database"
     fi
 }
@@ -60,15 +66,26 @@ if [ -f "$SECRETS_FILE" ]; then
     # Always reconstruct DATABASE_URL for embedded PostgreSQL
     # (in case it was set to postgres service from previous deployment)
     echo "Checking for embedded PostgreSQL..."
-    if command -v pg_ctl >/dev/null 2>&1; then
-        echo "✓ Found pg_ctl command - using embedded PostgreSQL"
+    if [ -x "/usr/lib/postgresql/15/bin/pg_ctl" ]; then
+        echo "✓ Found pg_ctl binary - using embedded PostgreSQL"
         OLD_DATABASE_URL="$DATABASE_URL"
         DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/micboard"
         echo "Updated DATABASE_URL for embedded PostgreSQL"
         echo "  Old: $OLD_DATABASE_URL"
         echo "  New: $DATABASE_URL"
     else
-        echo "✗ pg_ctl command not found - not using embedded PostgreSQL"
+        echo "✗ pg_ctl binary not found at /usr/lib/postgresql/15/bin/pg_ctl"
+        echo "  Checking if pg_ctl is in PATH..."
+        if command -v pg_ctl >/dev/null 2>&1; then
+            echo "✓ Found pg_ctl in PATH - using embedded PostgreSQL"
+            OLD_DATABASE_URL="$DATABASE_URL"
+            DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/micboard"
+            echo "Updated DATABASE_URL for embedded PostgreSQL"
+            echo "  Old: $OLD_DATABASE_URL"
+            echo "  New: $DATABASE_URL"
+        else
+            echo "✗ pg_ctl not found anywhere - not using embedded PostgreSQL"
+        fi
     fi
 else
     echo "Generating new secrets..."
