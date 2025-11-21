@@ -93,7 +93,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              ServeView - Church Display System
+              ServeView
             </p>
           </div>
         </div>
