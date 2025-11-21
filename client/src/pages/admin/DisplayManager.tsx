@@ -43,6 +43,15 @@ export default function DisplayManager() {
     is_primary: false
   });
 
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [locationForm, setLocationForm] = useState({
+    name: '',
+    slug: '',
+    display_name: '',
+    is_primary: false
+  });
+
   useEffect(() => {
     fetchLocations();
     fetchDisplays();
@@ -135,6 +144,64 @@ export default function DisplayManager() {
     }
   };
 
+  const handleAddLocation = () => {
+    setLocationForm({
+      name: '',
+      slug: '',
+      display_name: '',
+      is_primary: false
+    });
+    setEditingLocation(null);
+    setShowAddLocationModal(true);
+  };
+
+  const handleEditLocation = (location: Location) => {
+    setLocationForm({
+      name: location.name,
+      slug: location.slug,
+      display_name: location.display_name,
+      is_primary: location.is_primary
+    });
+    setEditingLocation(location);
+    setShowAddLocationModal(true);
+  };
+
+  const handleDeleteLocation = async (locationId: number) => {
+    if (!confirm('Are you sure you want to delete this location? This will also delete all associated displays and data.')) return;
+
+    try {
+      await adminAPI.deleteLocation(locationId);
+      await fetchLocations();
+      await fetchDisplays();
+    } catch (error: any) {
+      console.error('Failed to delete location:', error);
+      alert(error.response?.data?.error || 'Failed to delete location');
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    try {
+      const formData = {
+        name: locationForm.name,
+        slug: locationForm.slug,
+        displayName: locationForm.display_name,
+        isPrimary: locationForm.is_primary
+      };
+
+      if (editingLocation) {
+        await adminAPI.updateLocation(editingLocation.id, formData.name, formData.slug, formData.displayName, formData.isPrimary);
+      } else {
+        await adminAPI.createLocation(formData.name, formData.slug, formData.displayName, formData.isPrimary);
+      }
+
+      setShowAddLocationModal(false);
+      await fetchLocations();
+    } catch (error: any) {
+      console.error('Failed to save location:', error);
+      alert(error.response?.data?.error || 'Failed to save location');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -183,7 +250,10 @@ export default function DisplayManager() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Locations</h2>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors">
+            <button
+              onClick={handleAddLocation}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               Add Location
             </button>
@@ -208,10 +278,16 @@ export default function DisplayManager() {
                     <span className="text-sm text-gray-600">
                       {getDisplaysForLocation(location.id).length} display(s)
                     </span>
-                    <button className="p-2 text-gray-600 hover:text-primary hover:bg-primary-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleEditLocation(location)}
+                      className="p-2 text-gray-600 hover:text-primary hover:bg-primary-50 rounded-lg transition-colors"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleDeleteLocation(location.id)}
+                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -400,6 +476,87 @@ export default function DisplayManager() {
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600"
               >
                 {editingDisplay ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Location Modal */}
+      {showAddLocationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingLocation ? 'Edit Location' : 'Add Location'}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={locationForm.name}
+                  onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={locationForm.display_name}
+                  onChange={(e) => setLocationForm({ ...locationForm, display_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Slug
+                </label>
+                <input
+                  type="text"
+                  value={locationForm.slug}
+                  onChange={(e) => setLocationForm({ ...locationForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Only lowercase letters, numbers, and hyphens allowed</p>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="location_is_primary"
+                  checked={locationForm.is_primary}
+                  onChange={(e) => setLocationForm({ ...locationForm, is_primary: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="location_is_primary" className="ml-2 block text-sm text-gray-900">
+                  Set as primary location
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowAddLocationModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveLocation}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600"
+              >
+                {editingLocation ? 'Update' : 'Create'}
               </button>
             </div>
           </div>
