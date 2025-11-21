@@ -383,25 +383,46 @@ export default function Settings() {
           {/* Personal Access Token Setup Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
             <h3 className="text-sm font-semibold text-blue-900 mb-2">🔑 Personal Access Token Setup</h3>
+            <div className="text-sm text-blue-800 mb-3">
+              <p className="mb-2">
+                Personal Access Tokens provide secure API access without requiring OAuth app registration.
+                Follow these steps to create and configure your token:
+              </p>
+            </div>
             <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
               <li>
-                Go to your{' '}
+                Visit your{' '}
                 <a
                   href="https://api.planningcenteronline.com/personal_access_tokens"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline font-medium"
                 >
-                  Planning Center Personal Access Tokens page
-                </a>
+                  Planning Center Personal Access Tokens
+                </a>{' '}
+                page (requires admin access)
               </li>
-              <li>Click <strong>"Create a new Personal Access Token"</strong></li>
-              <li>Give it a descriptive name (e.g., "ServeView Integration")</li>
-              <li>Select the appropriate scopes: <strong>services</strong> and <strong>people</strong></li>
+              <li>Click the <strong>"Create a new Personal Access Token"</strong> button</li>
+              <li>
+                Enter a descriptive name like <strong>"ServeView Integration"</strong> or <strong>"Church Display System"</strong>
+              </li>
+              <li>
+                <strong>Select the required scopes:</strong>
+                <ul className="ml-6 mt-1 space-y-1">
+                  <li>• <code className="bg-blue-100 px-1 rounded text-xs">services</code> - Access to service plans and setlists</li>
+                  <li>• <code className="bg-blue-100 px-1 rounded text-xs">people</code> - Access to team member information</li>
+                </ul>
+              </li>
               <li>Click <strong>"Create Personal Access Token"</strong></li>
-              <li><strong>Copy the token immediately</strong> - you won't be able to see it again!</li>
-              <li>Paste the token below and click <strong>Save Settings</strong></li>
+              <li>
+                <strong className="text-red-700">⚠️ CRITICAL:</strong> Copy the token immediately - it will only be shown once and cannot be retrieved later
+              </li>
+              <li>Paste the token in the field below and click <strong>"Save Settings"</strong></li>
             </ol>
+            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+              <strong>Security Note:</strong> Keep your Personal Access Token secure. It provides access to your church's Planning Center data.
+              If compromised, revoke it immediately from your Planning Center account.
+            </div>
           </div>
 
           <div className="space-y-4">
