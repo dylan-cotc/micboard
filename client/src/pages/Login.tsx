@@ -43,7 +43,7 @@ export default function Login() {
                 className="h-16 w-auto"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">ServeView Admin</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Display Admin</h1>
             <p className="text-gray-600">Sign in to manage your display</p>
           </div>
 
