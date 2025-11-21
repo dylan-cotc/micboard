@@ -1,14 +1,14 @@
 services:
   app:
-    image: dylancotc/micboard:development
-    container_name: micboard-app
+    image: dylancotc/serveview:development
+    container_name: serveview-app
     ports:
       - "5001:5000"
     volumes:
       - uploads_data:/app/uploads
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/micboard
+      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/serveview
       - JWT_SECRET=032ed9bcbe8cad582dfb40b18d3dec38a927b0fbee1af489e154892a89d26842
       - PORT=5000
       - UPLOAD_DIR=uploads/photos

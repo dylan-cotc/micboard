@@ -35,7 +35,7 @@ export default function Login() {
         <div className="bg-white rounded-lg shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Micboard Admin</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">ServeView Admin</h1>
             <p className="text-gray-600">Sign in to manage your display</p>
           </div>
 
@@ -93,7 +93,7 @@ export default function Login() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Micboard - Church Display System
+              ServeView - Church Display System
             </p>
           </div>
         </div>

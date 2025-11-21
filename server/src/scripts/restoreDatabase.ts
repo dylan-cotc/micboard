@@ -15,7 +15,7 @@ async function restoreDatabase(backupFile: string) {
   try {
     // Restore the backup
     const { stdout, stderr } = await execAsync(
-      `PGPASSWORD="${process.env.POSTGRES_PASSWORD || 'postgres'}" psql -h localhost -U ${process.env.POSTGRES_USER || 'postgres'} -d micboard -f ${backupFile}`
+      `PGPASSWORD="${process.env.POSTGRES_PASSWORD || 'postgres'}" psql -h localhost -U ${process.env.POSTGRES_USER || 'postgres'} -d serveview -f ${backupFile}`
     );
 
     if (stderr && !stderr.includes('WARNING') && !stderr.includes('NOTICE')) {

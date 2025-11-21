@@ -1,4 +1,4 @@
-# Micboard - Church Display Management System
+# ServeView - Church Display Management System
 
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
@@ -45,8 +45,8 @@ A comprehensive church display management system built with modern web technolog
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
-   cd micboard
+   git clone https://github.com/dylan-cotc/ServeView.git
+   cd ServeView
    ```
 
 2. **Start the application**
@@ -75,8 +75,8 @@ A comprehensive church display management system built with modern web technolog
    ```
 
 2. **GitHub Actions automatically builds and pushes**
-   - Pushes to `development` branch → `dylancotc/micboard:development` tag
-   - Pushes to `main` branch → `dylancotc/micboard:latest` tag
+   - Pushes to `development` branch → `dylancotc/serveview:development` tag
+   - Pushes to `main` branch → `dylancotc/serveview:latest` tag
 
 3. **Test locally with development image**
    ```bash
@@ -97,7 +97,7 @@ A comprehensive church display management system built with modern web technolog
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `POSTGRES_USER` | `micboard_user` | PostgreSQL username |
+| `POSTGRES_USER` | `serveview_user` | PostgreSQL username |
 | `POSTGRES_PASSWORD` | `ef0d39f0c7d5b1047b84fe9e756392ee` | PostgreSQL password |
 | `DATABASE_URL` | Auto-generated | Full database connection string |
 | `JWT_SECRET` | Auto-generated | JWT signing secret |
@@ -122,7 +122,7 @@ The application automatically:
 ## 🏗️ Architecture
 
 ```
-Micboard Application
+ServeView Application
 ├── 🖥️  React Frontend (TypeScript)
 │   ├── Admin Dashboard
 │   ├── Display Management
@@ -206,8 +206,8 @@ docker-compose up --build
 
 The project uses GitHub Actions for automated Docker image builds:
 
-- **Development Branch** → Builds and pushes `dylancotc/micboard:development`
-- **Main Branch** → Builds and pushes `dylancotc/micboard:latest`
+- **Development Branch** → Builds and pushes `dylancotc/serveview:development`
+- **Main Branch** → Builds and pushes `dylancotc/serveview:latest`
 
 **Required GitHub Secrets:**
 - `DOCKERHUB_USERNAME` - Your Docker Hub username
@@ -225,4 +225,4 @@ This project is licensed under the ISC License.
 
 ---
 
-**Micboard** - Making church displays beautiful and easy to manage! 🎵⛪
+**ServeView** - See your team, serve with clarity! 🎵⛪

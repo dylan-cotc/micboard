@@ -40,7 +40,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', message: 'Micboard API is running' });
+  res.json({ status: 'ok', message: 'ServeView API is running' });
 });
 
 // Public routes
@@ -73,6 +73,6 @@ app.use((req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Micboard server running on port ${PORT}`);
+  console.log(`🚀 ServeView server running on port ${PORT}`);
   console.log(`📁 Upload directory: ${UPLOAD_DIR}`);
 });

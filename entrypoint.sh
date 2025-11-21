@@ -51,7 +51,7 @@ start_postgres() {
                         sleep 3
                         
                         # Create SQL dump
-                        if sudo -u postgres /usr/lib/postgresql/15/bin/pg_dump -h localhost -p 5432 micboard > "$BACKUP_FILE" 2>/dev/null; then
+                        if sudo -u postgres /usr/lib/postgresql/15/bin/pg_dump -h localhost -p 5432 serveview > "$BACKUP_FILE" 2>/dev/null; then
                             echo "✓ SQL backup created: $BACKUP_FILE"
                             echo "  Size: $(du -h "$BACKUP_FILE" | cut -f1)"
                         else
@@ -136,10 +136,10 @@ start_postgres() {
     done
 
     # Create database if it doesn't exist
-    if ! sudo -u postgres "$PSQL" -h localhost -p 5432 -lqt | cut -d \| -f 1 | grep -qw micboard; then
-        echo "Creating micboard database..."
-        sudo -u postgres "$CREATEDB" -h localhost -p 5432 micboard
-        echo "✓ Created micboard database"
+    if ! sudo -u postgres "$PSQL" -h localhost -p 5432 -lqt | cut -d \| -f 1 | grep -qw serveview; then
+        echo "Creating serveview database..."
+        sudo -u postgres "$CREATEDB" -h localhost -p 5432 serveview
+        echo "✓ Created serveview database"
     fi
     
     # Check if we need to restore from backup
@@ -150,7 +150,7 @@ start_postgres() {
             echo "   Backup file: $RESTORE_FILE"
             
             # Restore the SQL dump
-            if sudo -u postgres "$PSQL" -h localhost -p 5432 -d micboard -f "$RESTORE_FILE" >/dev/null 2>&1; then
+            if sudo -u postgres "$PSQL" -h localhost -p 5432 -d serveview -f "$RESTORE_FILE" >/dev/null 2>&1; then
                 echo "✓ Data restored successfully from backup"
                 echo "✓ Your existing data has been preserved"
                 rm -f /app/uploads/.restore_after_init
@@ -158,7 +158,7 @@ start_postgres() {
                 echo "⚠️  Failed to restore from backup - you may need to restore manually"
                 echo "   Backup file location: $RESTORE_FILE"
                 echo "   You can restore manually with:"
-                echo "   docker exec -it micboard-app psql -U postgres -d micboard -f $RESTORE_FILE"
+                echo "   docker exec -it serveview-app psql -U postgres -d serveview -f $RESTORE_FILE"
             fi
         else
             echo "⚠️  Restore file not found: $RESTORE_FILE"
@@ -190,7 +190,7 @@ if [ -f "$SECRETS_FILE" ]; then
     if [ -x "/usr/lib/postgresql/15/bin/pg_ctl" ]; then
         echo "✓ Found pg_ctl binary - using embedded PostgreSQL"
         OLD_DATABASE_URL="$DATABASE_URL"
-        DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/micboard"
+        DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/serveview"
         echo "Updated DATABASE_URL for embedded PostgreSQL"
         echo "  Old: $OLD_DATABASE_URL"
         echo "  New: $DATABASE_URL"
@@ -200,7 +200,7 @@ if [ -f "$SECRETS_FILE" ]; then
         if command -v pg_ctl >/dev/null 2>&1; then
             echo "✓ Found pg_ctl in PATH - using embedded PostgreSQL"
             OLD_DATABASE_URL="$DATABASE_URL"
-            DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/micboard"
+            DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/serveview"
             echo "Updated DATABASE_URL for embedded PostgreSQL"
             echo "  Old: $OLD_DATABASE_URL"
             echo "  New: $DATABASE_URL"
@@ -224,7 +224,7 @@ else
 
     # Construct DATABASE_URL if not provided
     if [ -z "$DATABASE_URL" ]; then
-        DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/micboard"
+        DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/serveview"
     fi
 
     # Save secrets to file
@@ -264,15 +264,15 @@ while [ $timeout -gt 0 ]; do
     if PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d postgres -c "SELECT 1;" >/dev/null 2>&1; then
         echo "✓ PostgreSQL is accepting connections"
         # Then check if our specific database exists and is accessible
-        if PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d micboard -c "SELECT 1;" >/dev/null 2>&1; then
-            echo "✓ Database 'micboard' is accessible"
+        if PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d serveview -c "SELECT 1;" >/dev/null 2>&1; then
+            echo "✓ Database 'serveview' is accessible"
             echo "Database is ready!"
             break
         else
-            echo "⚠️  PostgreSQL ready, but 'micboard' database not accessible yet..."
+            echo "⚠️  PostgreSQL ready, but 'serveview' database not accessible yet..."
             # Try to create the database if it doesn't exist
-            echo "Attempting to create 'micboard' database..."
-            PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE micboard;" 2>/dev/null && echo "✓ Created micboard database" || echo "Database might already exist or creation failed"
+            echo "Attempting to create 'serveview' database..."
+            PGPASSWORD="$POSTGRES_PASSWORD" psql -h localhost -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE serveview;" 2>/dev/null && echo "✓ Created serveview database" || echo "Database might already exist or creation failed"
         fi
     else
         echo "⚠️  PostgreSQL not ready yet... ($timeout seconds remaining)"
@@ -292,5 +292,5 @@ else
     echo "Admin user creation handled by database migrations"
 fi
 
-echo "Starting Micboard application..."
+echo "Starting ServeView application..."
 exec "$@"

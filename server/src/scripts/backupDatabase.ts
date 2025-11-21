@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 async function backupDatabase() {
   const backupDir = process.env.BACKUP_DIR || '/app/uploads/backups';
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupFile = path.join(backupDir, `micboard-backup-${timestamp}.sql`);
+  const backupFile = path.join(backupDir, `serveview-backup-${timestamp}.sql`);
 
   // Create backup directory if it doesn't exist
   if (!fs.existsSync(backupDir)) {
@@ -21,7 +21,7 @@ async function backupDatabase() {
   try {
     // Use pg_dump to create a complete backup
     const { stdout, stderr } = await execAsync(
-      `PGPASSWORD="${process.env.POSTGRES_PASSWORD || 'postgres'}" pg_dump -h localhost -U ${process.env.POSTGRES_USER || 'postgres'} -d micboard -F p -f ${backupFile}`
+      `PGPASSWORD="${process.env.POSTGRES_PASSWORD || 'postgres'}" pg_dump -h localhost -U ${process.env.POSTGRES_USER || 'postgres'} -d serveview -F p -f ${backupFile}`
     );
 
     if (stderr && !stderr.includes('WARNING')) {
