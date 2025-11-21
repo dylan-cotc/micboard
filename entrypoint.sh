@@ -23,9 +23,42 @@ start_postgres() {
         rm -f /var/lib/postgresql/data/postmaster.pid
     fi
 
-    # Initialize database if not already done
+    # Check if database exists and has locale issues
+    if [ -d "/var/lib/postgresql/data/base" ]; then
+        echo "Existing database found. Checking locale compatibility..."
+        
+        # Check PG_VERSION to see if database exists
+        if [ -f "/var/lib/postgresql/data/PG_VERSION" ]; then
+            # Try to detect locale issues by checking if we can connect
+            if sudo -u postgres /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data status >/dev/null 2>&1; then
+                echo "PostgreSQL is already running"
+            else
+                # Check for locale issues in the control file
+                if grep -q "en_US.utf8" /var/lib/postgresql/data/postgresql.conf 2>/dev/null || \
+                   grep -q "en_US.utf8" /var/lib/postgresql/data/PG_VERSION 2>/dev/null; then
+                    echo "⚠️  Database has incompatible locale (en_US.utf8)"
+                    echo "⚠️  The database cluster must be reinitialized with C locale"
+                    echo "⚠️  Backing up and reinitializing database..."
+                    
+                    # Backup the old data directory
+                    if [ -d "/var/lib/postgresql/data.backup" ]; then
+                        rm -rf /var/lib/postgresql/data.backup
+                    fi
+                    mv /var/lib/postgresql/data /var/lib/postgresql/data.backup
+                    echo "✓ Old database backed up to /var/lib/postgresql/data.backup"
+                    
+                    # Create new data directory
+                    mkdir -p /var/lib/postgresql/data
+                    chown -R postgres:postgres /var/lib/postgresql/data
+                    chmod 700 /var/lib/postgresql/data
+                fi
+            fi
+        fi
+    fi
+
+    # Initialize database if not already done or if we just moved the old one
     if [ ! -d "/var/lib/postgresql/data/base" ]; then
-        echo "Initializing PostgreSQL database..."
+        echo "Initializing PostgreSQL database with C locale..."
         # Use C locale to avoid locale issues
         sudo -u postgres /usr/lib/postgresql/15/bin/initdb -D /var/lib/postgresql/data --locale=C --encoding=UTF8
         
@@ -34,23 +67,7 @@ start_postgres() {
         echo "listen_addresses = '*'" >> /var/lib/postgresql/data/postgresql.conf
         echo "host all all 0.0.0.0/0 md5" >> /var/lib/postgresql/data/pg_hba.conf
         echo "host all all ::0/0 md5" >> /var/lib/postgresql/data/pg_hba.conf
-    else
-        # Fix locale issues in existing database
-        echo "Checking for locale configuration issues..."
-        if grep -q "en_US.utf8" /var/lib/postgresql/data/postgresql.conf 2>/dev/null; then
-            echo "Fixing locale settings in postgresql.conf..."
-            # Fix all locale-related settings
-            sed -i "s/lc_messages = 'en_US.utf8'/lc_messages = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_monetary = 'en_US.utf8'/lc_monetary = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_numeric = 'en_US.utf8'/lc_numeric = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_time = 'en_US.utf8'/lc_time = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            # Also fix any without quotes
-            sed -i "s/lc_messages = en_US.utf8/lc_messages = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_monetary = en_US.utf8/lc_monetary = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_numeric = en_US.utf8/lc_numeric = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            sed -i "s/lc_time = en_US.utf8/lc_time = 'C'/g" /var/lib/postgresql/data/postgresql.conf
-            echo "✓ Fixed locale settings"
-        fi
+        echo "✓ PostgreSQL initialized successfully"
     fi
 
     # Start PostgreSQL
