@@ -433,11 +433,7 @@ export default function Settings() {
                 : 'bg-red-50 text-red-800 border border-red-200'
             }`}
           >
-            {message.type === 'success' ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
+            <AlertCircle className="w-5 h-5" />
             <span>{message.text}</span>
           </div>
         )}
