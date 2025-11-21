@@ -20,6 +20,8 @@ async function runMigrations() {
       '010_add_microphone_separator.sql',
       '011_add_primary_location_constraint.sql',
       '012_create_users_table.sql',
+      '013_update_settings_for_personal_access_token.sql',
+      '014_create_displays_table.sql',
     ];
 
     // Run each migration in order
