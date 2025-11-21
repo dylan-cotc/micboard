@@ -2,10 +2,7 @@
 -- Creates displays table with globally unique slugs
 -- Displays are associated with locations and have service type associations
 
--- Add display_id column to microphones table
-ALTER TABLE microphones ADD COLUMN IF NOT EXISTS display_id INTEGER REFERENCES displays(id);
-
--- Create displays table
+-- Create displays table FIRST
 CREATE TABLE IF NOT EXISTS displays (
   id SERIAL PRIMARY KEY,
   location_id INTEGER NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -69,6 +66,9 @@ WHERE id IN (
     )
 );
 
+-- Add display_id column to microphones table AFTER displays table exists
+ALTER TABLE microphones ADD COLUMN IF NOT EXISTS display_id INTEGER REFERENCES displays(id);
+
 -- Update microphones to reference displays instead of locations
 -- For now, assign all microphones to the primary display of each location
 UPDATE microphones
@@ -77,7 +77,8 @@ SET display_id = (
     WHERE location_id = microphones.location_id
     AND is_primary = true
     LIMIT 1
-);
+)
+WHERE display_id IS NULL;
 
 -- For locations without primary displays, assign to first available display
 UPDATE microphones
@@ -88,8 +89,13 @@ SET display_id = (
 )
 WHERE display_id IS NULL;
 
--- Make display_id NOT NULL after migration
-ALTER TABLE microphones ALTER COLUMN display_id SET NOT NULL;
+-- Make display_id NOT NULL after migration (only if there are displays)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM displays LIMIT 1) THEN
+        ALTER TABLE microphones ALTER COLUMN display_id SET NOT NULL;
+    END IF;
+END $$;
 
 -- Remove service type association from locations
 ALTER TABLE locations DROP COLUMN IF EXISTS pc_service_type_id;
