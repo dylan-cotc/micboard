@@ -251,6 +251,24 @@ export const adminAPI = {
     const response = await api.delete(`/admin/users/${userId}`);
     return response.data;
   },
+
+  // Planning Center OAuth
+  getPCAuthUrl: async () => {
+    const response = await api.get('/oauth/planning-center/authorize-url');
+    return response.data;
+  },
+  getPCOAuthStatus: async () => {
+    const response = await api.get('/oauth/planning-center/status');
+    return response.data;
+  },
+  disconnectPCOAuth: async () => {
+    const response = await api.delete('/oauth/planning-center/disconnect');
+    return response.data;
+  },
+  refreshPCOAuth: async () => {
+    const response = await api.post('/oauth/planning-center/refresh');
+    return response.data;
+  },
 };
 
 export default api;

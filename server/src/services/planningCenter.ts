@@ -60,7 +60,55 @@ class PlanningCenterService {
   private client: AxiosInstance | null = null;
 
   async initialize(appId?: string, secret?: string): Promise<void> {
-    // Get credentials from database settings if not provided
+    // First, try to use OAuth token if available
+    const tokenResult = await pool.query(
+      'SELECT access_token, expires_at, refresh_token FROM oauth_tokens WHERE provider = $1 ORDER BY created_at DESC LIMIT 1',
+      ['planning_center']
+    );
+
+    if (tokenResult.rows.length > 0) {
+      const token = tokenResult.rows[0];
+      const now = new Date();
+      const expiresAt = new Date(token.expires_at);
+
+      // Check if token is expired
+      if (expiresAt <= now && token.refresh_token) {
+        // Token is expired, try to refresh it
+        try {
+          await this.refreshToken(token.refresh_token);
+          // Re-fetch the new token
+          const newTokenResult = await pool.query(
+            'SELECT access_token FROM oauth_tokens WHERE provider = $1 ORDER BY created_at DESC LIMIT 1',
+            ['planning_center']
+          );
+          if (newTokenResult.rows.length > 0) {
+            this.client = axios.create({
+              baseURL: PC_API_BASE,
+              headers: {
+                'Authorization': `Bearer ${newTokenResult.rows[0].access_token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to refresh OAuth token:', error);
+          // Fall through to use basic auth if available
+        }
+      } else if (expiresAt > now) {
+        // Token is still valid, use it
+        this.client = axios.create({
+          baseURL: PC_API_BASE,
+          headers: {
+            'Authorization': `Bearer ${token.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        return;
+      }
+    }
+
+    // Fallback to basic auth with App ID and Secret (legacy support)
     let pcAppId = appId;
     let pcSecret = secret;
 
@@ -79,9 +127,10 @@ class PlanningCenterService {
     }
 
     if (!pcAppId || !pcSecret) {
-      throw new Error('Planning Center credentials not configured');
+      throw new Error('Planning Center credentials not configured. Please configure OAuth or provide App ID and Secret.');
     }
 
+    // Use basic auth as fallback
     this.client = axios.create({
       baseURL: PC_API_BASE,
       auth: {
@@ -92,6 +141,57 @@ class PlanningCenterService {
         'Content-Type': 'application/json',
       },
     });
+  }
+
+  private async refreshToken(refreshToken: string): Promise<void> {
+    // Get OAuth client credentials
+    const settingsResult = await pool.query(
+      "SELECT key, value FROM settings WHERE key IN ('pc_oauth_client_id', 'pc_oauth_client_secret') LIMIT 2"
+    );
+
+    const settings = settingsResult.rows.reduce((acc: any, row: any) => {
+      acc[row.key] = row.value;
+      return acc;
+    }, {});
+
+    const clientId = settings.pc_oauth_client_id;
+    const clientSecret = settings.pc_oauth_client_secret;
+
+    if (!clientId || !clientSecret) {
+      throw new Error('OAuth credentials not configured');
+    }
+
+    // Request new access token
+    const tokenResponse = await axios.post('https://api.planningcenteronline.com/oauth/token', {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const {
+      access_token,
+      refresh_token: new_refresh_token,
+      token_type,
+      expires_in,
+      scope
+    } = tokenResponse.data;
+
+    // Calculate expiration timestamp
+    const expiresAt = new Date(Date.now() + (expires_in * 1000));
+
+    // Update tokens in database
+    await pool.query('DELETE FROM oauth_tokens WHERE provider = $1', ['planning_center']);
+    
+    await pool.query(
+      `INSERT INTO oauth_tokens (provider, access_token, refresh_token, token_type, expires_at, scope)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      ['planning_center', access_token, new_refresh_token || refreshToken, token_type, expiresAt, scope]
+    );
   }
 
   private ensureInitialized(): void {

@@ -7,6 +7,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import displayRoutes from './routes/display';
+import oauthRoutes from './routes/oauth';
 
 // Middleware
 import { authenticateToken } from './middleware/auth';
@@ -45,6 +46,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Public routes
 app.use('/api/auth', authRoutes);
 app.use('/api/display', displayRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 // Protected admin routes
 app.use('/api/admin', authenticateToken, adminRoutes);
