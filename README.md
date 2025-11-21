@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
-A comprehensive church display management system built with modern web technologies. Manage people, positions, microphones, and display configurations for church services with an intuitive web interface.
+Integrating with Planning Center Services, ServeView lets you see your team at a glance - who's on the schedule, who's assigned to microphones, and what's happening in your service. Built with modern web technologies for churches that want clarity and simplicity.
 
 ## ✨ Features
 
