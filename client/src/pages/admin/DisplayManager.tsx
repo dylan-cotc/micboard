@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, MapPin, Monitor, Settings, Trash2, Edit } from 'lucide-react';
+import { Plus, MapPin, Monitor, Trash2, Edit } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
 interface Location {
