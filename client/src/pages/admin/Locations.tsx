@@ -23,6 +23,8 @@ export default function Locations() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [showDisplayForm, setShowDisplayForm] = useState(false);
   const [selectedLocationForDisplay, setSelectedLocationForDisplay] = useState<Location | null>(null);
+  const [showAddDisplayModal, setShowAddDisplayModal] = useState(false);
+  const [editingDisplay, setEditingDisplay] = useState<Display | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Location form state
@@ -34,6 +36,16 @@ export default function Locations() {
     timezone: 'America/New_York',
   });
 
+  // Display form state
+  const [displayFormData, setDisplayFormData] = useState({
+    location_id: '',
+    name: '',
+    slug: '',
+    pc_service_type_id: '',
+    max_people: 20,
+    is_primary: false
+  });
+
 
   useEffect(() => {
     fetchData();
@@ -41,24 +53,12 @@ export default function Locations() {
 
   const fetchData = async () => {
     try {
-      const locationsData = await adminAPI.getLocations();
+      const [locationsData, displaysData] = await Promise.all([
+        adminAPI.getLocations(),
+        adminAPI.getDisplays()
+      ]);
       setLocations(locationsData);
-      // For now, we'll get displays from the existing locations endpoint
-      // This will be updated when we implement the proper displays API
-      const displayData: Display[] = locationsData.flatMap((location: any) =>
-        location.pc_service_type_id ? [{
-          id: location.id,
-          location_id: location.id,
-          name: 'Main Display',
-          slug: `main-${location.slug}`,
-          pc_service_type_id: location.pc_service_type_id,
-          service_type_name: location.service_type_name,
-          is_primary: location.is_primary,
-          max_people: 20,
-          assignment_count: 0 // This will be populated from API later
-        }] : []
-      );
-      setDisplays(displayData);
+      setDisplays(displaysData);
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to load data' });
     } finally {
@@ -184,6 +184,85 @@ export default function Locations() {
     setShowCreateForm(false);
     setEditingLocation(null);
     setLocationFormData({ name: '', slug: '', displayName: '', isPrimary: false, timezone: 'America/New_York' });
+  };
+
+  // Display CRUD functions
+  const handleAddDisplay = () => {
+    if (!selectedLocationForDisplay) return;
+    setDisplayFormData({
+      location_id: selectedLocationForDisplay.id.toString(),
+      name: '',
+      slug: '',
+      pc_service_type_id: '',
+      max_people: 20,
+      is_primary: false
+    });
+    setEditingDisplay(null);
+    setShowAddDisplayModal(true);
+  };
+
+  const handleEditDisplay = (display: Display) => {
+    setDisplayFormData({
+      location_id: display.location_id.toString(),
+      name: display.name,
+      slug: display.slug,
+      pc_service_type_id: display.pc_service_type_id || '',
+      max_people: display.max_people,
+      is_primary: display.is_primary
+    });
+    setEditingDisplay(display);
+    setShowAddDisplayModal(true);
+  };
+
+  const handleDeleteDisplay = async (display: Display) => {
+    if (!confirm(`Are you sure you want to delete "${display.name}"?`)) return;
+
+    try {
+      await adminAPI.deleteDisplay(display.id);
+      setMessage({ type: 'success', text: 'Display deleted successfully' });
+      await fetchData();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to delete display' });
+    }
+  };
+
+  const handleSaveDisplay = async () => {
+    try {
+      const formData = {
+        location_id: parseInt(displayFormData.location_id),
+        name: displayFormData.name,
+        slug: displayFormData.slug,
+        pc_service_type_id: displayFormData.pc_service_type_id || undefined,
+        max_people: displayFormData.max_people,
+        is_primary: displayFormData.is_primary
+      };
+
+      if (editingDisplay) {
+        await adminAPI.updateDisplay(editingDisplay.id, formData);
+        setMessage({ type: 'success', text: 'Display updated successfully' });
+      } else {
+        await adminAPI.createDisplay(formData);
+        setMessage({ type: 'success', text: 'Display created successfully' });
+      }
+
+      setShowAddDisplayModal(false);
+      await fetchData();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to save display' });
+    }
+  };
+
+  const handleCancelDisplayForm = () => {
+    setShowAddDisplayModal(false);
+    setEditingDisplay(null);
+    setDisplayFormData({
+      location_id: '',
+      name: '',
+      slug: '',
+      pc_service_type_id: '',
+      max_people: 20,
+      is_primary: false
+    });
   };
 
   if (loading) {
@@ -445,7 +524,10 @@ export default function Locations() {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-600">Displays for this location</p>
-                <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors">
+                <button
+                  onClick={handleAddDisplay}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+                >
                   <Plus className="w-4 h-4" />
                   Add Display
                 </button>
@@ -472,10 +554,18 @@ export default function Locations() {
                         <span className="text-sm text-gray-600">
                           {display.assignment_count || 0} assignment(s)
                         </span>
-                        <button className="p-2 text-gray-600 hover:text-primary hover:bg-primary-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => handleEditDisplay(display)}
+                          className="p-2 text-gray-600 hover:text-primary hover:bg-primary-50 rounded-lg transition-colors"
+                          title="Edit display"
+                        >
                           <Settings className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => handleDeleteDisplay(display)}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete display"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -489,6 +579,99 @@ export default function Locations() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Display Modal */}
+      {showAddDisplayModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingDisplay ? 'Edit Display' : 'Add Display'}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={displayFormData.name}
+                  onChange={(e) => setDisplayFormData({ ...displayFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Slug
+                </label>
+                <input
+                  type="text"
+                  value={displayFormData.slug}
+                  onChange={(e) => setDisplayFormData({ ...displayFormData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Only lowercase letters, numbers, and hyphens allowed</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Service Type ID (optional)
+                </label>
+                <input
+                  type="text"
+                  value={displayFormData.pc_service_type_id}
+                  onChange={(e) => setDisplayFormData({ ...displayFormData, pc_service_type_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Max People
+                </label>
+                <input
+                  type="number"
+                  value={displayFormData.max_people}
+                  onChange={(e) => setDisplayFormData({ ...displayFormData, max_people: parseInt(e.target.value) || 20 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  min="1"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="display_is_primary"
+                  checked={displayFormData.is_primary}
+                  onChange={(e) => setDisplayFormData({ ...displayFormData, is_primary: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="display_is_primary" className="ml-2 block text-sm text-gray-900">
+                  Set as primary display for this location
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={handleCancelDisplayForm}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDisplay}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600"
+              >
+                {editingDisplay ? 'Update' : 'Create'}
+              </button>
             </div>
           </div>
         </div>
