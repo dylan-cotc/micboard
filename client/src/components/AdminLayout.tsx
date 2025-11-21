@@ -90,9 +90,9 @@ export default function AdminLayout() {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Bar with Logo and Location Selector */}
-          <div className="bg-white border-b px-8 py-4 flex items-center justify-between">
-             <LocationSelector />
+          {/* Location Selector Bar */}
+          <div className="bg-white border-b p-4 shadow-sm">            
+            <LocationSelector />
           </div>
 
           {/* Page Content */}
