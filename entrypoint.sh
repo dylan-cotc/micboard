@@ -38,19 +38,51 @@ start_postgres() {
                    grep -q "en_US.utf8" /var/lib/postgresql/data/PG_VERSION 2>/dev/null; then
                     echo "⚠️  Database has incompatible locale (en_US.utf8)"
                     echo "⚠️  The database cluster must be reinitialized with C locale"
-                    echo "⚠️  Backing up and reinitializing database..."
+                    
+                    # Try to start PostgreSQL temporarily to create a SQL backup
+                    echo "Attempting to create SQL backup before reinitialization..."
+                    BACKUP_DIR="/app/uploads/backups"
+                    mkdir -p "$BACKUP_DIR"
+                    BACKUP_FILE="$BACKUP_DIR/pre-locale-fix-$(date +%Y%m%d-%H%M%S).sql"
+                    
+                    # Try to start PostgreSQL with the old locale (might work briefly)
+                    if sudo -u postgres /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/backup.log start -o "-c lc_messages=C -c lc_monetary=C -c lc_numeric=C -c lc_time=C" 2>/dev/null; then
+                        echo "PostgreSQL started temporarily for backup..."
+                        sleep 3
+                        
+                        # Create SQL dump
+                        if sudo -u postgres /usr/lib/postgresql/15/bin/pg_dump -h localhost -p 5432 micboard > "$BACKUP_FILE" 2>/dev/null; then
+                            echo "✓ SQL backup created: $BACKUP_FILE"
+                            echo "  Size: $(du -h "$BACKUP_FILE" | cut -f1)"
+                        else
+                            echo "⚠️  Could not create SQL backup (database may not be accessible)"
+                        fi
+                        
+                        # Stop PostgreSQL
+                        sudo -u postgres /usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data stop -m fast >/dev/null 2>&1
+                        sleep 2
+                    else
+                        echo "⚠️  Could not start PostgreSQL for backup"
+                    fi
                     
                     # Backup the old data directory
+                    echo "Backing up database cluster directory..."
                     if [ -d "/var/lib/postgresql/data.backup" ]; then
                         rm -rf /var/lib/postgresql/data.backup
                     fi
                     mv /var/lib/postgresql/data /var/lib/postgresql/data.backup
-                    echo "✓ Old database backed up to /var/lib/postgresql/data.backup"
+                    echo "✓ Old database cluster backed up to /var/lib/postgresql/data.backup"
                     
                     # Create new data directory
                     mkdir -p /var/lib/postgresql/data
                     chown -R postgres:postgres /var/lib/postgresql/data
                     chmod 700 /var/lib/postgresql/data
+                    
+                    # Create a restore flag file
+                    if [ -f "$BACKUP_FILE" ]; then
+                        echo "$BACKUP_FILE" > /app/uploads/.restore_after_init
+                        echo "✓ Restore flag created - data will be restored after initialization"
+                    fi
                 fi
             fi
         fi
@@ -108,6 +140,30 @@ start_postgres() {
         echo "Creating micboard database..."
         sudo -u postgres "$CREATEDB" -h localhost -p 5432 micboard
         echo "✓ Created micboard database"
+    fi
+    
+    # Check if we need to restore from backup
+    if [ -f "/app/uploads/.restore_after_init" ]; then
+        RESTORE_FILE=$(cat /app/uploads/.restore_after_init)
+        if [ -f "$RESTORE_FILE" ]; then
+            echo "📦 Restoring data from SQL backup..."
+            echo "   Backup file: $RESTORE_FILE"
+            
+            # Restore the SQL dump
+            if sudo -u postgres "$PSQL" -h localhost -p 5432 -d micboard -f "$RESTORE_FILE" >/dev/null 2>&1; then
+                echo "✓ Data restored successfully from backup"
+                echo "✓ Your existing data has been preserved"
+                rm -f /app/uploads/.restore_after_init
+            else
+                echo "⚠️  Failed to restore from backup - you may need to restore manually"
+                echo "   Backup file location: $RESTORE_FILE"
+                echo "   You can restore manually with:"
+                echo "   docker exec -it micboard-app psql -U postgres -d micboard -f $RESTORE_FILE"
+            fi
+        else
+            echo "⚠️  Restore file not found: $RESTORE_FILE"
+            rm -f /app/uploads/.restore_after_init
+        fi
     fi
 }
 
