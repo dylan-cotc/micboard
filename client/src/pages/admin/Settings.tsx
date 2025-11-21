@@ -435,16 +435,44 @@ export default function Settings() {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Planning Center Integration</h2>
           <p className="text-sm text-gray-600 mb-4">
             Connect to Planning Center using OAuth for secure access to your service data.
-            Create an OAuth application at{' '}
-            <a
-              href="https://api.planningcenteronline.com/oauth/applications"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Planning Center Developer Portal
-            </a>
           </p>
+
+          {/* OAuth Setup Instructions */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold text-blue-900 mb-2">📋 OAuth Application Setup</h3>
+            <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+              <li>
+                Create an OAuth application at{' '}
+                <a
+                  href="https://api.planningcenteronline.com/oauth/applications"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Planning Center Developer Portal
+                </a>
+              </li>
+              <li>
+                Use this <strong>Authorization callback URL</strong>:
+                <div className="mt-1 p-2 bg-white border border-blue-300 rounded font-mono text-xs break-all select-all">
+                  {window.location.origin}/api/oauth/planning-center/callback
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/api/oauth/planning-center/callback`);
+                    setMessage({ type: 'success', text: 'Callback URL copied to clipboard!' });
+                  }}
+                  className="mt-1 text-xs text-primary hover:underline"
+                >
+                  📋 Click to copy
+                </button>
+              </li>
+              <li>Copy the <strong>Client ID</strong> and <strong>Secret</strong> from Planning Center and paste them below</li>
+              <li>Click <strong>Save Settings</strong> below</li>
+              <li>Then click <strong>Connect to Planning Center</strong> to authorize</li>
+            </ol>
+          </div>
 
           {/* OAuth Connection Status */}
           {oauthConnected && (
