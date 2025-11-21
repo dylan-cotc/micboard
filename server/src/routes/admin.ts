@@ -1196,6 +1196,7 @@ router.get('/displays', async (req: Request, res: Response): Promise<void> => {
     let query = `
       SELECT d.*,
         l.display_name as location_name,
+        l.service_type_name,
         COUNT(p.id) as assignment_count
       FROM displays d
       LEFT JOIN locations l ON d.location_id = l.id
@@ -1209,7 +1210,7 @@ router.get('/displays', async (req: Request, res: Response): Promise<void> => {
       params.push(location_id);
     }
 
-    query += ' GROUP BY d.id, l.display_name ORDER BY d.location_id, d.name';
+    query += ' GROUP BY d.id, l.display_name, l.service_type_name ORDER BY d.location_id, d.name';
 
     const result = await pool.query(query, params);
     res.json(result.rows);

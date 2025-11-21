@@ -38,13 +38,17 @@ export default function Locations() {
 
   // Display form state
   const [displayFormData, setDisplayFormData] = useState({
-    location_id: '',
+    location_id: 0,
     name: '',
     slug: '',
     pc_service_type_id: '',
     max_people: 20,
     is_primary: false
   });
+
+  // Display operation states
+  const [displayLoading, setDisplayLoading] = useState(false);
+  const [deletingDisplayId, setDeletingDisplayId] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -77,6 +81,14 @@ export default function Locations() {
 
   const getDisplaysForLocation = (locationId: number) => {
     return displays.filter(display => display.location_id === locationId);
+  };
+
+  const handleDisplayNameChange = (name: string) => {
+    setDisplayFormData({
+      ...displayFormData,
+      name,
+      slug: generateSlug(name),
+    });
   };
 
   const handleManageDisplays = (location: Location) => {
@@ -190,7 +202,7 @@ export default function Locations() {
   const handleAddDisplay = () => {
     if (!selectedLocationForDisplay) return;
     setDisplayFormData({
-      location_id: selectedLocationForDisplay.id.toString(),
+      location_id: selectedLocationForDisplay.id,
       name: '',
       slug: '',
       pc_service_type_id: '',
@@ -203,7 +215,7 @@ export default function Locations() {
 
   const handleEditDisplay = (display: Display) => {
     setDisplayFormData({
-      location_id: display.location_id.toString(),
+      location_id: display.location_id,
       name: display.name,
       slug: display.slug,
       pc_service_type_id: display.pc_service_type_id || '',
@@ -215,23 +227,42 @@ export default function Locations() {
   };
 
   const handleDeleteDisplay = async (display: Display) => {
-    if (!confirm(`Are you sure you want to delete "${display.name}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${display.name}"? This action cannot be undone.`)) return;
 
+    setDeletingDisplayId(display.id);
     try {
       await adminAPI.deleteDisplay(display.id);
       setMessage({ type: 'success', text: 'Display deleted successfully' });
       await fetchData();
     } catch (error: any) {
+      console.error('Delete display error:', error);
       setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to delete display' });
+    } finally {
+      setDeletingDisplayId(null);
     }
   };
 
   const handleSaveDisplay = async () => {
+    // Form validation
+    if (!displayFormData.name.trim()) {
+      setMessage({ type: 'error', text: 'Display name is required' });
+      return;
+    }
+    if (!displayFormData.slug.trim()) {
+      setMessage({ type: 'error', text: 'Display slug is required' });
+      return;
+    }
+    if (!/^[a-z0-9-]+$/.test(displayFormData.slug)) {
+      setMessage({ type: 'error', text: 'Slug must contain only lowercase letters, numbers, and hyphens' });
+      return;
+    }
+
+    setDisplayLoading(true);
     try {
       const formData = {
-        location_id: parseInt(displayFormData.location_id),
-        name: displayFormData.name,
-        slug: displayFormData.slug,
+        location_id: displayFormData.location_id,
+        name: displayFormData.name.trim(),
+        slug: displayFormData.slug.trim(),
         pc_service_type_id: displayFormData.pc_service_type_id || undefined,
         max_people: displayFormData.max_people,
         is_primary: displayFormData.is_primary
@@ -248,7 +279,14 @@ export default function Locations() {
       setShowAddDisplayModal(false);
       await fetchData();
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to save display' });
+      console.error('Save display error:', error);
+      if (error.response?.status === 409) {
+        setMessage({ type: 'error', text: 'A display with this slug already exists' });
+      } else {
+        setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to save display' });
+      }
+    } finally {
+      setDisplayLoading(false);
     }
   };
 
@@ -256,7 +294,7 @@ export default function Locations() {
     setShowAddDisplayModal(false);
     setEditingDisplay(null);
     setDisplayFormData({
-      location_id: '',
+      location_id: 0,
       name: '',
       slug: '',
       pc_service_type_id: '',
@@ -563,10 +601,15 @@ export default function Locations() {
                         </button>
                         <button
                           onClick={() => handleDeleteDisplay(display)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          disabled={deletingDisplayId === display.id}
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Delete display"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deletingDisplayId === display.id ? (
+                            <div className="w-4 h-4 border border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -595,13 +638,14 @@ export default function Locations() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Display Name
+                  Display Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={displayFormData.name}
-                  onChange={(e) => setDisplayFormData({ ...displayFormData, name: e.target.value })}
+                  onChange={(e) => handleDisplayNameChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g., Main Stage Display"
                   required
                 />
               </div>
@@ -668,8 +712,12 @@ export default function Locations() {
               </button>
               <button
                 onClick={handleSaveDisplay}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600"
+                disabled={displayLoading}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {displayLoading && (
+                  <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
                 {editingDisplay ? 'Update' : 'Create'}
               </button>
             </div>
