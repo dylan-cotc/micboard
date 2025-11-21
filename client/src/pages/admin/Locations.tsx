@@ -57,18 +57,22 @@ export default function Locations() {
 
   const fetchData = async () => {
     try {
-      const [locationsData, displaysData] = await Promise.all([
-        adminAPI.getLocations(),
-        adminAPI.getDisplays().catch(err => {
-          console.error('Failed to fetch displays:', err);
-          return []; // Return empty array if displays fail to load
-        })
-      ]);
+      // Fetch locations first
+      const locationsData = await adminAPI.getLocations();
       setLocations(locationsData);
-      setDisplays(displaysData);
+      
+      // Then try to fetch displays, but don't fail if it errors
+      try {
+        const displaysData = await adminAPI.getDisplays();
+        setDisplays(displaysData);
+      } catch (displayError) {
+        console.error('Failed to fetch displays:', displayError);
+        setDisplays([]); // Set empty array if displays fail
+        // Don't show error message for displays failure - locations still work
+      }
     } catch (error) {
-      console.error('Failed to load data:', error);
-      setMessage({ type: 'error', text: 'Failed to load data' });
+      console.error('Failed to load locations:', error);
+      setMessage({ type: 'error', text: 'Failed to load locations. Please check your connection and try again.' });
     } finally {
       setLoading(false);
     }
