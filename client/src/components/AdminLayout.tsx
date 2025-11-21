@@ -43,8 +43,11 @@ export default function AdminLayout() {
         {/* Sidebar */}
         <div className="w-64 bg-white shadow-lg">
           <div className="p-6 border-b">
-            <h1 className="text-2xl font-bold text-primary">ServeView</h1>
-            <p className="text-sm text-gray-600 mt-1">Admin Panel</p>
+            <img
+                src={ServeViewLogo}
+                alt="ServeView Logo"
+                className="h-8 w-auto"
+              />
           </div>
 
           <nav className="p-4 space-y-2">
@@ -89,15 +92,7 @@ export default function AdminLayout() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Bar with Logo and Location Selector */}
           <div className="bg-white border-b px-8 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src={ServeViewLogo}
-                alt="ServeView Logo"
-                className="h-8 w-auto"
-              />
-              <span className="text-lg font-semibold text-gray-900">ServeView Admin</span>
-            </div>
-            <LocationSelector />
+             <LocationSelector />
           </div>
 
           {/* Page Content */}
